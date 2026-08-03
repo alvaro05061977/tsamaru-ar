@@ -1,0 +1,89 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+<title>Tsamaru AR — Aya Uma</title>
+<script src="https://cdn.jsdelivr.net/npm/aframe@1.5.0/dist/aframe.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/mind-ar@1.2.5/dist/mindar-image-aframe.prod.js"></script>
+<style>
+  html,body{margin:0;padding:0;height:100%;background:#0d0518;font-family:-apple-system,'Segoe UI',Roboto,sans-serif;overflow:hidden}
+  #overlay{position:fixed;inset:0;z-index:20;display:flex;flex-direction:column;align-items:center;justify-content:center;
+    background:radial-gradient(circle at 50% 30%,#2a0f45 0%,#0d0518 70%);color:#fff;text-align:center;padding:24px;transition:opacity .5s}
+  #overlay.hidden{opacity:0;pointer-events:none}
+  #overlay h1{font-size:2rem;letter-spacing:.25em;margin:0 0 4px;color:#e653c8}
+  #overlay h2{font-size:1rem;font-weight:400;margin:0 0 24px;color:#cbb6e8}
+  #overlay img{width:150px;border-radius:12px;box-shadow:0 0 30px rgba(230,83,200,.5);margin-bottom:24px}
+  #overlay p{max-width:320px;line-height:1.5;color:#e8ddf7;font-size:.95rem}
+  #startBtn{margin-top:18px;background:linear-gradient(135deg,#e653c8,#8b2fd6);color:#fff;border:none;border-radius:999px;
+    padding:14px 42px;font-size:1.05rem;font-weight:600;letter-spacing:.05em;cursor:pointer;box-shadow:0 4px 20px rgba(230,83,200,.45)}
+  #hint{position:fixed;bottom:22px;left:0;right:0;z-index:15;text-align:center;color:#fff;font-size:.9rem;
+    text-shadow:0 1px 4px rgba(0,0,0,.8);opacity:0;transition:opacity .4s;pointer-events:none}
+  #hint.show{opacity:1}
+</style>
+</head>
+<body>
+  <div id="overlay">
+    <h1>TSAMARU</h1>
+    <h2>Realidad Aumentada</h2>
+    <img src="marker.png" alt="Aya Uma">
+    <p>Apunta la cámara a la imagen de <strong>Aya Uma</strong> en la parte trasera del libro y míralo cobrar vida.</p>
+    <button id="startBtn">Comenzar</button>
+  </div>
+  <div id="hint">Busca la imagen de Aya Uma con tu cámara…</div>
+
+  <a-scene id="scene" mindar-image="imageTargetSrc: ./targets.mind; autoStart: false; uiLoading: no; uiScanning: no; uiError: yes;"
+           color-space="sRGB" renderer="colorManagement: true; physicallyCorrectLights: true"
+           vr-mode-ui="enabled: false" device-orientation-permission-ui="enabled: false" embedded>
+    <a-assets>
+      <a-asset-item id="ayaModel" src="./aya.glb"></a-asset-item>
+    </a-assets>
+
+    <a-camera position="0 0 0" look-controls="enabled: false"></a-camera>
+
+    <a-entity id="anchor" mindar-image-target="targetIndex: 0">
+      <a-entity light="type: hemisphere; color: #ffffff; groundColor: #7a3fa0; intensity: 1.8"></a-entity>
+      <a-entity light="type: directional; color: #ffffff; intensity: 2.4" position="0.5 1 1.2"></a-entity>
+
+      <!-- pivot rotated so the character stands OUT of the book -->
+      <a-entity id="stand" rotation="90 0 0">
+        <a-entity id="spinner" position="0 0.02 0">
+          <a-entity id="aya" gltf-model="#ayaModel" scale="0.001 0.001 0.001" position="0 0 0"></a-entity>
+        </a-entity>
+        <a-circle id="glow" radius="0.42" rotation="-90 0 0" position="0 0.005 0"
+                  material="color: #e653c8; transparent: true; opacity: 0; shader: flat"></a-circle>
+      </a-entity>
+    </a-entity>
+  </a-scene>
+
+<script>
+  const sceneEl = document.getElementById('scene');
+  const overlay = document.getElementById('overlay');
+  const hint = document.getElementById('hint');
+  const aya = document.getElementById('aya');
+  const spinner = document.getElementById('spinner');
+  const glow = document.getElementById('glow');
+
+  document.getElementById('startBtn').addEventListener('click', () => {
+    overlay.classList.add('hidden');
+    hint.classList.add('show');
+    const arSystem = sceneEl.systems['mindar-image-system'];
+    arSystem.start();
+  });
+
+  const anchor = document.getElementById('anchor');
+  anchor.addEventListener('targetFound', () => {
+    hint.classList.remove('show');
+    // entrance: grow out of the book
+    aya.removeAttribute('animation__in');
+    aya.setAttribute('animation__in', 'property: scale; from: 0.001 0.001 0.001; to: 0.55 0.55 0.55; dur: 700; easing: easeOutElastic');
+    // idle: slow turn + gentle hover
+    spinner.setAttribute('animation__spin', 'property: rotation; from: 0 0 0; to: 0 360 0; dur: 14000; loop: true; easing: linear');
+    spinner.setAttribute('animation__bob', 'property: position; from: 0 0.02 0; to: 0 0.09 0; dur: 2200; dir: alternate; loop: true; easing: easeInOutSine');
+    glow.setAttribute('animation__glow', 'property: material.opacity; from: 0; to: 0.35; dur: 900; easing: easeOutQuad');
+    glow.setAttribute('animation__pulse', 'property: material.opacity; from: 0.35; to: 0.15; dur: 2200; dir: alternate; loop: true; easing: easeInOutSine; delay: 900');
+  });
+  anchor.addEventListener('targetLost', () => { hint.classList.add('show'); });
+</script>
+</body>
+</html>
